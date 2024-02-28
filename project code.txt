@@ -1,0 +1,99 @@
+/** The Address Book
+
+The Chairperson:    0x5B38Da6a701c568545dCfcB03FcB875f56beddC4
+
+Proposal names:     Alice, Betty
+Proposal names:     Alice, Betty
+(name, bytes32-encoded name, account)
+
+Alice:              0x416c696365000000000000000000000000000000000000000000000000000000  0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2
+
+Betty:              0x4265747479000000000000000000000000000000000000000000000000000000  0x4B20993Bc481177ec7E8f571ceCaE8A9e22C02db
+
+    
+Contract input argument:
+["0x416c696365000000000000000000000000000000000000000000000000000000","0x4265747479000000000000000000000000000000000000000000000000000000","0x436563696c696100000000000000000000000000000000000000000000000000","0x44616e6100000000000000000000000000000000000000000000000000000000"]
+***/
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract OrganizationVoting {
+    address public owner;
+    bool public votingOpen;
+    uint public votingEndTime = 60;
+    uint public totalVotes;
+    uint public candidateAVotes;
+    uint public candidateBVotes;
+    bytes32 public candidateA;
+    bytes32 public candidateB;
+
+    struct Voter {
+        bool hasVoted;
+        // bool isEligible = true;
+    }
+
+    mapping(address => Voter) public voters;
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Only the owner can execute this function.");
+        _;
+    }
+
+    modifier votingIsOpen() {
+        require(votingOpen, "Voting is not currently open.");
+        require(block.timestamp < votingEndTime, "Voting has ended.");
+        _;
+    }
+
+    modifier votingIsClosed() {
+        require(!votingOpen, "Voting is still open.");
+        _;
+    }
+
+    constructor(bytes32 _candidateA, bytes32 _candidateB, uint durationInMinutes) {
+        owner = msg.sender;
+        votingOpen = true;
+        votingEndTime = block.timestamp + (durationInMinutes * 1 minutes);
+        totalVotes = 0;
+        candidateAVotes = 0;
+        candidateBVotes = 0;
+        candidateA = _candidateA;
+        candidateB = _candidateB;
+    }
+
+    function vote(bool forCandidateA) external votingIsOpen {
+        // require(voters[msg.sender].isEligible, "You are not eligible to vote.");
+        require(!voters[msg.sender].hasVoted, "You have already voted.");
+
+        voters[msg.sender].hasVoted = true;
+        totalVotes++;
+
+        if (forCandidateA) {
+            candidateAVotes++;
+        } else {
+            candidateBVotes++;
+        }
+    }
+
+    function closeVoting() external onlyOwner votingIsOpen {
+        votingOpen = false;
+    }
+
+    function getCandidateAVotes() external view votingIsClosed returns (uint) {
+        return candidateAVotes;
+    }
+
+    function getCandidateBVotes() external view votingIsClosed returns (uint) {
+        return candidateBVotes;
+    }
+
+    function declareWinner() external view onlyOwner votingIsClosed returns (bytes32) {
+        if (candidateAVotes > candidateBVotes) {
+            return candidateA;
+        } else {
+            return candidateB;
+        }
+    }
+}
+
